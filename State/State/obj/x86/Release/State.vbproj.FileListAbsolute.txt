@@ -1,0 +1,12 @@
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Release\State.exe
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Release\State.pdb
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Release\State.xml
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.State.resources
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.Resources.resources
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.vbproj.GenerateResource.Cache
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.exe
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.xml
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Release\State.pdb
+C:\Users\yoshi\documents\visual studio 2010\Projects\State\State\obj\x86\Release\State.exe
+C:\Users\yoshi\documents\visual studio 2010\Projects\State\State\obj\x86\Release\State.xml
+C:\Users\yoshi\documents\visual studio 2010\Projects\State\State\obj\x86\Release\State.pdb

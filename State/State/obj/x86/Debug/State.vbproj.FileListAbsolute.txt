@@ -1,0 +1,9 @@
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Debug\State.exe
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Debug\State.pdb
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\bin\Debug\State.xml
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.State.resources
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.Resources.resources
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.vbproj.GenerateResource.Cache
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.exe
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.xml
+C:\Users\yoshi\AppData\Local\Temporary Projects\State\obj\x86\Debug\State.pdb
