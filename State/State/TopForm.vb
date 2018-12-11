@@ -1,5 +1,6 @@
 ﻿Imports System.Reflection
 Imports System.Data.OleDb
+Imports System.Runtime.InteropServices
 
 Public Class TopForm
 
@@ -46,6 +47,12 @@ Public Class TopForm
 
     End Class
 
+    Public Sub New()
+        InitializeComponent()
+
+        Me.StartPosition = FormStartPosition.CenterScreen
+    End Sub
+
     Private Sub topForm_Load(sender As System.Object, e As System.EventArgs) Handles MyBase.Load
         'セルスタイル設定
         disableCellStyle = New DataGridViewCellStyle()
@@ -72,26 +79,32 @@ Public Class TopForm
 
         '一般病棟部分表示
         ippanDt = New DataTable
-        sql = "select P.Nam as 一般病棟, Int((Format(NOW(),'YYYYMMDD')-Format(P.Birth, 'YYYYMMDD'))/10000) as 年齢, S.State as 動態, P.Birth, P.Kana from [" & DB_Patient & "].UsrM as P left join StateD as S on (P.Nam = S.Nam and P.Nurse = 1 and P.Sanato = 0) order by P.Kana"
+        sql = "select P.Nam as 一般病棟, Int((Format(NOW(),'YYYYMMDD')-Format(P.Birth, 'YYYYMMDD'))/10000) as 年齢, S.State as 動態, P.Birth, P.Kana from [" & DB_Patient & "].UsrM as P left join StateD as S on (P.Nam = S.Nam and P.Nurse = 1) order by P.Kana"
         rs.Open(sql, cnn, ADODB.CursorTypeEnum.adOpenForwardOnly, ADODB.LockTypeEnum.adLockReadOnly)
         da.Fill(ds, rs, "ippan")
         ippanDt = ds.Tables("ippan")
+        removeDuplicateDataRow(ippanDt)
         fillBlankCell(ippanDt)
         ippanDataGridView.DataSource = ippanDt
         ippanDisplayFlg = True
 
         '療養病棟部分表示
         ryouyouDt = New DataTable
-        sql = "select P.Nam as 療養病棟, Int((Format(NOW(),'YYYYMMDD')-Format(P.Birth, 'YYYYMMDD'))/10000) as 年齢, S.State as 動態, P.Birth, P.Kana from [" & DB_Patient & "].UsrM as P left join StateD as S on (P.Nam = S.Nam and P.Sanato = 1) order by P.Kana"
+        sql = "select P.Nam as 療養病棟, Int((Format(NOW(),'YYYYMMDD')-Format(P.Birth, 'YYYYMMDD'))/10000) as 年齢, S.State as 動態, P.Birth, P.Kana from [" & DB_Patient & "].UsrM as P left join StateD as S on (P.Nam = S.Nam  and P.Sanato = 1) order by P.Kana"
         rs.Open(sql, cnn, ADODB.CursorTypeEnum.adOpenForwardOnly, ADODB.LockTypeEnum.adLockReadOnly)
         da.Fill(ds, rs, "ryouyou")
         ryouyouDt = ds.Tables("ryouyou")
+        removeDuplicateDataRow(ryouyouDt)
         fillBlankCell(ryouyouDt)
         ryouyouDataGridView.DataSource = ryouyouDt
         ryouyouDisplayFlg = True
 
         '表示設定
         settingDatagridview()
+
+        '
+        ippanDataGridView.CurrentCell = Nothing
+        ryouyouDataGridView.CurrentCell = Nothing
 
     End Sub
 
@@ -116,6 +129,8 @@ Public Class TopForm
             .BackgroundColor = Color.FromKnownColor(KnownColor.Control)
             .ShowCellToolTips = False
             .DefaultCellStyle.SelectionForeColor = Color.Black
+            .GridColor = Color.FromKnownColor(KnownColor.Control)
+            .BorderStyle = BorderStyle.None
             With .Columns("一般病棟")
                 .Width = 90
                 .ReadOnly = True
@@ -152,6 +167,8 @@ Public Class TopForm
             .BackgroundColor = Color.FromKnownColor(KnownColor.Control)
             .ShowCellToolTips = False
             .DefaultCellStyle.SelectionForeColor = Color.Black
+            .GridColor = Color.FromKnownColor(KnownColor.Control)
+            .BorderStyle = BorderStyle.None
             With .Columns("療養病棟")
                 .Width = 90
                 .ReadOnly = True
@@ -190,6 +207,17 @@ Public Class TopForm
 
     End Sub
 
+    Private Sub removeDuplicateDataRow(dt As DataTable)
+        Dim namList As New List(Of String)
+        For i As Integer = dt.Rows.Count - 1 To 0 Step -1
+            If existsListNam(dt.Rows(i).Item(0), namList) Then
+                dt.Rows.RemoveAt(i)
+                Continue For
+            End If
+            namList.Add(dt.Rows(i).Item(0))
+        Next
+    End Sub
+
     Private Sub fillBlankCell(dt As DataTable)
         Dim rowCount As Integer = dt.Rows.Count
         '既にデータが50件あれば終了
@@ -203,7 +231,7 @@ Public Class TopForm
         For i As Integer = 0 To rowCount - 1
             sum += dt.Rows(i).Item(1)
         Next
-        sum = sum / rowCount
+        sum = Math.Floor(sum / rowCount)
         row = dt.NewRow()
         row.Item(0) = "(平均年齢)"
         row.Item(1) = sum
@@ -220,6 +248,36 @@ Public Class TopForm
             dt.Rows.Add(row)
         Next
 
+    End Sub
+
+    Private Sub ippanDataGridView_CellEndEdit(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles ippanDataGridView.CellEndEdit
+        ippanDataGridView(e.ColumnIndex, e.RowIndex).Style.Alignment = DataGridViewContentAlignment.MiddleCenter
+        If ippanDisplayFlg = True AndAlso ryouyouDisplayFlg = True Then
+            Dim targetName As String = ippanDt.Rows(e.RowIndex).Item(0)
+            For Each row As DataRow In ryouyouDt.Rows
+                If IsDBNull(row.Item(0)) Then
+                    Exit For
+                ElseIf row.Item(0) = targetName Then
+                    row.Item(2) = ippanDt.Rows(e.RowIndex).Item(2)
+                    Exit For
+                End If
+            Next
+        End If
+    End Sub
+
+    Private Sub ryouyouDataGridView_CellEndEdit(sender As Object, e As System.Windows.Forms.DataGridViewCellEventArgs) Handles ryouyouDataGridView.CellEndEdit
+        ryouyouDataGridView(e.ColumnIndex, e.RowIndex).Style.Alignment = DataGridViewContentAlignment.MiddleCenter
+        If ippanDisplayFlg = True AndAlso ryouyouDisplayFlg = True Then
+            Dim targetName As String = ryouyouDt.Rows(e.RowIndex).Item(0)
+            For Each row As DataRow In ippanDt.Rows
+                If IsDBNull(row.Item(0)) Then
+                    Exit For
+                ElseIf row.Item(0) = targetName Then
+                    row.Item(2) = ryouyouDt.Rows(e.RowIndex).Item(2)
+                    Exit For
+                End If
+            Next
+        End If
     End Sub
 
     Private Sub ippanDataGridView_CellPainting(sender As Object, e As System.Windows.Forms.DataGridViewCellPaintingEventArgs) Handles ippanDataGridView.CellPainting
@@ -265,11 +323,15 @@ Public Class TopForm
     End Sub
 
     Private Sub ippanDataGridView_GotFocus(sender As Object, e As System.EventArgs) Handles ippanDataGridView.GotFocus
-        ryouyouDataGridView.CurrentCell.Selected = False
+        If Not IsNothing(ryouyouDataGridView.CurrentCell) Then
+            ryouyouDataGridView.CurrentCell.Selected = False
+        End If
     End Sub
 
     Private Sub ryouyouDataGridView_GotFocus(sender As Object, e As System.EventArgs) Handles ryouyouDataGridView.GotFocus
-        ippanDataGridView.CurrentCell.Selected = False
+        If Not IsNothing(ippanDataGridView.CurrentCell) Then
+            ippanDataGridView.CurrentCell.Selected = False
+        End If
     End Sub
 
     Private Sub ippanDataGridView_MouseWheel(sender As Object, e As System.Windows.Forms.MouseEventArgs) Handles ippanDataGridView.MouseWheel
@@ -300,7 +362,7 @@ Public Class TopForm
 
         '数字(0～3)まで入力可(delete or backspace は0を入力)
         If e.KeyCode = Keys.Back OrElse e.KeyCode = Keys.Delete Then
-            tb.Text = 0
+            tb.Text = "0"
             e.SuppressKeyPress = True
         ElseIf Keys.D0 <= e.KeyCode AndAlso e.KeyCode <= Keys.D3 Then
             tb.Text = Chr(e.KeyCode)
@@ -326,9 +388,152 @@ Public Class TopForm
 
             '該当する列か調べる
             If dgv.CurrentCell.OwningColumn.Name = "動態" Then
+                dgv.CurrentCell.Style.Alignment = DataGridViewContentAlignment.MiddleRight
                 'イベントハンドラを追加
                 AddHandler tb.KeyDown, AddressOf dataGridViewTextBox_KeyDown
             End If
         End If
+    End Sub
+
+    Private Function getInputRowCount(dt As DataTable) As Integer
+        Dim count As Integer = 0
+        For Each row As DataRow In dt.Rows
+            If row(0) = "(平均年齢)" Then
+                Exit For
+            End If
+            count += 1
+        Next
+        Return count
+    End Function
+
+    Private Function existsListNam(nam As String, namList As List(Of String)) As Boolean
+        For Each n As String In namList
+            If n = nam Then
+                Return True
+            End If
+        Next
+        Return False
+    End Function
+
+    Private Sub regist_Click(sender As System.Object, e As System.EventArgs) Handles regist.Click
+        Dim cn As New ADODB.Connection()
+        cn.Open(DB_State)
+        Dim cmd As New ADODB.Command()
+        cmd.ActiveConnection = cn
+
+        '削除
+        cmd.CommandText = "Delete from StateD"
+        cmd.Execute()
+
+        '行数取得
+        Dim ippanRowCount As Integer = getInputRowCount(ippanDt)
+        Dim ryouyouRowCount As Integer = getInputRowCount(ryouyouDt)
+
+        '登録
+        Dim registNamList As New List(Of String)
+        Dim rs As New ADODB.Recordset
+        rs.Open("StateD", cn, ADODB.CursorTypeEnum.adOpenForwardOnly, ADODB.LockTypeEnum.adLockPessimistic)
+        '一般病棟
+        For i As Integer = 0 To ippanRowCount
+            If Not IsDBNull(ippanDt.Rows(i).Item("動態")) AndAlso ippanDt.Rows(i).Item("動態") <> 0 AndAlso Not existsListNam(ippanDt.Rows(i).Item("一般病棟"), registNamList) Then
+                registNamList.Add(ippanDt.Rows(i).Item("一般病棟"))
+                With rs
+                    .AddNew()
+                    .Fields("Nam").Value = ippanDt.Rows(i).Item("一般病棟")
+                    .Fields("Birth").Value = ippanDt.Rows(i).Item("Birth")
+                    .Fields("State").Value = ippanDt.Rows(i).Item("動態")
+                End With
+            End If
+        Next
+        '療養病棟
+        For i As Integer = 0 To ryouyouRowCount
+            If Not IsDBNull(ryouyouDt.Rows(i).Item("動態")) AndAlso ryouyouDt.Rows(i).Item("動態") <> 0 AndAlso Not existsListNam(ryouyouDt.Rows(i).Item("療養病棟"), registNamList) Then
+                registNamList.Add(ryouyouDt.Rows(i).Item("療養病棟"))
+                With rs
+                    .AddNew()
+                    .Fields("Nam").Value = ryouyouDt.Rows(i).Item("療養病棟")
+                    .Fields("Birth").Value = ryouyouDt.Rows(i).Item("Birth")
+                    .Fields("State").Value = ryouyouDt.Rows(i).Item("動態")
+                End With
+            End If
+        Next
+        rs.Update()
+        cn.Close()
+
+        '再表示
+        ippanDataGridView.DataSource = Nothing
+        ryouyouDataGridView.DataSource = Nothing
+        displayTable()
+
+        MsgBox("登録しました。")
+    End Sub
+
+    Private Sub print_Click(sender As System.Object, e As System.EventArgs) Handles print.Click
+        Dim objExcel As Object
+        Dim objWorkBooks As Object
+        Dim objWorkBook As Object
+        Dim oSheet As Object
+
+        objExcel = CreateObject("Excel.Application")
+        objWorkBooks = objExcel.Workbooks
+        objWorkBook = objWorkBooks.Open(excelFilePass)
+        oSheet = objWorkBook.Worksheets("動態報告")
+
+        '文字削除処理
+        oSheet.Range("F2").value = ""
+        oSheet.Range("B5").value = ""
+        oSheet.Range("F5").value = ""
+
+        '現在日付
+        Dim nowDate As Date = DateTime.Now
+        oSheet.Range("F2").value = nowDate.ToString("yyyy/MM/dd")
+
+        '一般病棟部分
+        Dim ippanCharArray As String() = {"C", "D", "E"}
+        Dim ippanRowCount As Integer = 0
+        For Each row As DataRow In ippanDt.Rows
+            If row.Item("一般病棟") = "(平均年齢)" Then
+                Exit For
+            End If
+            oSheet.Range("B" & (5 + ippanRowCount)).value = row.Item("一般病棟")
+            If Not IsDBNull(row.Item("動態")) AndAlso row.Item("動態") <> 0 Then
+                oSheet.Range(ippanCharArray((row.Item("動態") - 1)) & (5 + ippanRowCount)).value = "※"
+            End If
+            ippanRowCount += 1
+        Next
+
+        '療養病棟部分
+        Dim ryouyouCharArray As String() = {"G", "H", "I"}
+        Dim ryouyouRowCount As Integer = 0
+        For Each row As DataRow In ryouyouDt.Rows
+            If row.Item("療養病棟") = "(平均年齢)" Then
+                Exit For
+            End If
+            oSheet.Range("F" & (5 + ryouyouRowCount)).value = row.Item("療養病棟")
+            If Not IsDBNull(row.Item("動態")) AndAlso row.Item("動態") <> 0 Then
+                oSheet.Range(ryouyouCharArray((row.Item("動態") - 1)) & (5 + ryouyouRowCount)).value = "※"
+            End If
+            ryouyouRowCount += 1
+        Next
+
+
+        '変更保存確認ダイアログ非表示
+        objExcel.DisplayAlerts = False
+
+        '印刷 or 印刷プレビュー
+        If rbtnPreview.Checked Then
+            objExcel.Visible = True
+            oSheet.PrintPreview(1)
+        ElseIf rbtnPrint.Checked Then
+            oSheet.printOut()
+        End If
+
+        ' EXCEL解放
+        objExcel.Quit()
+        Marshal.ReleaseComObject(objWorkBook)
+        Marshal.ReleaseComObject(objExcel)
+        oSheet = Nothing
+        objWorkBook = Nothing
+        objExcel = Nothing
     End Sub
 End Class
